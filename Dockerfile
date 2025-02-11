@@ -1,23 +1,25 @@
-# Start your image with a node base image
-FROM node:18-alpine
+# Use a lightweight Ubuntu base image
+FROM ubuntu:22.04
 
-# The /app directory should act as the main application directory
+# Set environment variables (optional)
+ENV OLLAMA_MODELS=/root/.ollama
+
+# Install dependencies and Ollama
+RUN apt update && apt install -y \
+    curl python3 python3-pip && \
+    curl -fsSL https://ollama.com/install.sh | sh
+
+# Install FastAPI for serving the DeepSeek model
+RUN pip install fastapi uvicorn ollama
+
+# Set working directory
 WORKDIR /app
 
-# Copy the app package and package-lock.json file
-COPY package*.json ./
+# Copy the FastAPI server file
+COPY server.py /app
 
-# Copy local directories to the current local directory of our docker image (/app)
-COPY ./src ./src
-COPY ./public ./public
+# Expose API port
+EXPOSE 8000
 
-# Install node packages, install serve, build the app, and remove dependencies at the end
-RUN npm install \
-    && npm install -g serve \
-    && npm run build \
-    && rm -fr node_modules
-
-EXPOSE 3000
-
-# Start the app using serve command
-CMD [ "serve", "-s", "build" ]
+# Run FastAPI when the container starts
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
